@@ -1,22 +1,24 @@
 import argparse
 import math
 import os
-import shutil
-
+import datetime
 import torch
 import torch.nn as nn
 import torch.optim.lr_scheduler
 from torchvision import datasets, transforms
 from tqdm import tqdm
+from PIL import ImageFile
+from net import MobileNetV3LargePlusLatent
 
-from net import AlexNetPlusLatent
+BASE_DATAPATH = ".\\data\\df2_parsed\\"
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 parser = argparse.ArgumentParser(description='Deep Hashing')
 parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
                     help='learning rate (default: 0.01)')
 parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
                     help='SGD momentum (default: 0.9)')
-parser.add_argument('--epoch', type=int, default=128, metavar='epoch',
+parser.add_argument('--epoch', type=int, default=25, metavar='epoch',
                     help='epoch')
 parser.add_argument('--pretrained', type=int, default=0, metavar='pretrained_model',
                     help='loading pretrained model(default = None)')
@@ -38,16 +40,24 @@ def init_dataset():
         [transforms.Resize(227),
          transforms.ToTensor(),
          transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
-    trainset = datasets.CIFAR10(root='./data', train=True, download=True,
-                                transform=transform_train)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=128,
-                                              shuffle=True, num_workers=0)
 
-    testset = datasets.CIFAR10(root='./data', train=False, download=True,
-                               transform=transform_test)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=100,
-                                             shuffle=True, num_workers=0)
-    return trainloader, testloader
+    trainset = datasets.ImageFolder(root=os.path.join(BASE_DATAPATH, 'train'), transform=transform_train)
+    valset = datasets.ImageFolder(root=os.path.join(BASE_DATAPATH, 'val'), transform=transform_train)
+    # testset = datasets.ImageFolder(root=os.path.join(BASE_DATAPATH, 'test'), transform=transform_train)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=16, shuffle=True)
+    valloader = torch.utils.data.DataLoader(valset, batch_size=16, shuffle=True)
+    # testloader = torch.utils.data.DataLoader(testset, batch_size=16, shuffle=True)
+
+    # trainset = datasets.CIFAR10(root='./data', train=True, download=True,
+    #                             transform=transform_train)
+    # trainloader = torch.utils.data.DataLoader(trainset, batch_size=32,
+    #                                           shuffle=True, num_workers=0)
+    #
+    # testset = datasets.CIFAR10(root='./data', train=False, download=True,
+    #                            transform=transform_test)
+    # testloader = torch.utils.data.DataLoader(testset, batch_size=100,
+    #                                          shuffle=True, num_workers=0)
+    return trainloader, valloader
 
 
 def train(epoch_num):
@@ -93,16 +103,17 @@ def test():
         pbar.close()
         acc = 100 * int(correct) / int(total)
         if epoch == args.epoch:
+            date = datetime.datetime.now().strftime("%Y-%m-%d")
             print('Saving')
             if not os.path.isdir('{}'.format(args.path)):
                 os.mkdir('{}'.format(args.path))
-            torch.save(net.state_dict(), './{}/{}'.format(args.path, acc))
+            torch.save(net.state_dict(), './{}/{}-{}'.format(args.path, acc, date))
 
 
 if __name__ == '__main__':
     torch.cuda.empty_cache()  # When using windows, this line is needed
     trainloader, testloader = init_dataset()
-    net = AlexNetPlusLatent(args.bits)
+    net = MobileNetV3LargePlusLatent(50)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print("Use device: " + str(device))
     net.to(device)
@@ -113,12 +124,12 @@ if __name__ == '__main__':
     start_epoch = 1
     if args.pretrained:
         net.load_state_dict(torch.load('./{}/{}'.format(args.path, args.pretrained)))
-        test()
+        # test()
     else:
-        if os.path.isdir('{}'.format(args.path)):
-            shutil.rmtree('{}'.format(args.path))
+        # if os.path.isdir('{}'.format(args.path)):
+        #     shutil.rmtree('{}'.format(args.path))
         for epoch in range(start_epoch, start_epoch + args.epoch):
-            train(epoch)
+            # train(epoch)
             test()
             scheduler.step(epoch)
 
