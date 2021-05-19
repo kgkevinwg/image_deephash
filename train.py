@@ -8,7 +8,7 @@ import torch.optim.lr_scheduler
 from torchvision import datasets, transforms
 from tqdm import tqdm
 from PIL import ImageFile
-from net import MobileNetV3LargePlusLatent
+from net import MobileNetV3LargePlusLatent, Resnet50PlusLatent
 
 BASE_DATAPATH = ".\\data\\df2_parsed\\"
 ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -63,6 +63,7 @@ def init_dataset():
 def train(epoch_num):
     print('\nEpoch: %d' % epoch_num)
     net.train()
+    net.cuda()
     train_loss = 0
     correct = 0
     total = 0
@@ -113,7 +114,7 @@ def test():
 if __name__ == '__main__':
     torch.cuda.empty_cache()  # When using windows, this line is needed
     trainloader, testloader = init_dataset()
-    net = MobileNetV3LargePlusLatent(50)
+    net = Resnet50PlusLatent(50)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print("Use device: " + str(device))
     net.to(device)
@@ -129,7 +130,7 @@ if __name__ == '__main__':
         # if os.path.isdir('{}'.format(args.path)):
         #     shutil.rmtree('{}'.format(args.path))
         for epoch in range(start_epoch, start_epoch + args.epoch):
-            # train(epoch)
+            train(epoch)
             test()
             scheduler.step(epoch)
 
