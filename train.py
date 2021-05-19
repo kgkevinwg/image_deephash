@@ -11,6 +11,8 @@ from PIL import ImageFile
 from net import MobileNetV3LargePlusLatent, Resnet50PlusLatent
 
 BASE_DATAPATH = ".\\data\\df2_parsed\\"
+MODEL_NAME = 'mobilenetv3_large'
+DATASET_NAME = 'deepfashion2'
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 parser = argparse.ArgumentParser(description='Deep Hashing')
@@ -103,12 +105,12 @@ def test():
                 pbar.update(1)
         pbar.close()
         acc = 100 * int(correct) / int(total)
-        if epoch == args.epoch:
-            date = datetime.datetime.now().strftime("%Y-%m-%d")
-            print('Saving')
-            if not os.path.isdir('{}'.format(args.path)):
-                os.mkdir('{}'.format(args.path))
-            torch.save(net.state_dict(), './{}/{}-{}'.format(args.path, acc, date))
+
+        date = datetime.datetime.now().strftime("%Y-%m-%d")
+        print('Saving')
+        if not os.path.isdir('{}'.format(args.path)):
+            os.mkdir('{}'.format(args.path))
+        torch.save(net.state_dict(), './{}/{}-{}-{}-{}'.format(args.path, MODEL_NAME, DATASET_NAME, acc, date))
 
 
 if __name__ == '__main__':
